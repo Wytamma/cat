@@ -49,9 +49,9 @@
 <div class="container h-full w-full mx-auto flex justify-center items-center">
 	<div class="space-y-5">
 		<div class="flex justify-center items-center space-x-2 align-middle">
-			<span class="text-4xl sm:text-8xl">📄📄📄</span> 
-			<span class="text-2xl sm:text-5xl">➡️</span> 
-			<span class="text-4xl sm:text-8xl">📄</span>
+			<span class="text-5xl sm:text-8xl">📄📄📄</span> 
+			<span class="text-3xl sm:text-5xl">➡️</span> 
+			<span class="text-5xl sm:text-8xl">📄</span>
 		</div>
 		<div class="text-center">
 			<p>Concatenate multiple files into one</p>
