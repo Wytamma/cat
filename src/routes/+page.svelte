@@ -13,8 +13,11 @@
 		const totalFileSize = Array.from(files).reduce((acc, file) => acc + file.size, 0);
 
 		// Create a writable stream for the concatenated file
-		const fileName = 'concatenated.txt'; // Change to desired output file name
-		const writableStream = streamSaver.createWriteStream(fileName, {
+		const fileName = 'concatenated'; // Change to desired output file name
+		// get the extension of the first file
+		const extension = files[0].name.split('.').pop() || 'txt';
+
+		const writableStream = streamSaver.createWriteStream(`${fileName}.${extension}`, {
           size: totalFileSize // Makes the percentage visible in the download
         });
 		const writer = writableStream.getWriter();
