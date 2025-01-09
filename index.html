@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Files to Disk</title>
+    <style>
+        #progressContainer {
+            margin-top: 20px;
+            width: 100%;
+            background-color: #f3f3f3;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #progressBar {
+            height: 20px;
+            width: 0;
+            background-color: #4caf50;
+            transition: width 0.2s;
+        }
+    </style>
+</head>
+<body>
+    <h1>Stream Files Directly to Disk</h1>
+    <p>Select multiple files to concatenate their contents directly to disk.</p>
+    <input type="file" id="fileInput" multiple>
+    <button id="processFiles">Concatenate and Save</button>
+
+    <div id="progressContainer">
+        <div id="progressBar"></div>
+    </div>
+
+    <script>
+        async function concatenateFilesAndSave(files) {
+            const progressBar = document.getElementById("progressBar");
+            const totalFiles = files.length;
+
+            // Prompt the user to choose a save location using the File System Access API
+            const handle = await window.showSaveFilePicker({
+                suggestedName: "combined-files.txt",
+                types: [
+                    {
+                        description: "Text Files",
+                        accept: { "text/plain": [".txt"] },
+                    },
+                ],
+            });
+
+            // Create a writable stream for the chosen file
+            const writableStream = await handle.createWritable();
+
+            // Helper function to stream file content to the writable stream
+            async function streamFile(file, index) {
+                const reader = file.stream().getReader();
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    await writableStream.write(value);
+                }
+
+                // Update progress bar
+                const progress = ((index + 1) / totalFiles) * 100;
+                progressBar.style.width = progress + "%";
+            }
+
+            // Process files sequentially
+            for (const [index, file] of files.entries()) {
+                console.log(`Processing file: ${file.name}`);
+                await streamFile(file, index);
+            }
+
+            // Close the writable stream when done
+            await writableStream.close();
+
+            // Reset progress bar after completion
+            progressBar.style.width = "0";
+
+            alert("Files concatenated and saved successfully!");
+        }
+
+        document.getElementById("processFiles").addEventListener("click", async () => {
+            const inputElement = document.getElementById("fileInput");
+            const files = Array.from(inputElement.files); // Get selected files
+            if (files.length === 0) {
+                alert("No files selected. Please select files first.");
+                return;
+            }
+
+            try {
+                await concatenateFilesAndSave(files);
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred while saving the file.");
+            }
+        });
+    </script>
+</body>
+</html>
