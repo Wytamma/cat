@@ -2,8 +2,6 @@
 	import { FileDropzone } from '@skeletonlabs/skeleton';
 	import { Accordion, AccordionItem } from '@skeletonlabs/skeleton';
 
-	import * as streamSaver from 'streamsaver';
-
 	let files: FileList | undefined = undefined;
 	let regexInput: string = ''; // Holds the user-provided regex string
 	let defaultFilename: string = 'concatenated'; // Default filename for the concatenated file
@@ -46,8 +44,6 @@
 
 		// Process each group and concatenate files
 		for (const [group, groupedFiles] of Object.entries(fileGroups)) {
-			const totalFileSize = groupedFiles.reduce((acc, file) => acc + file.size, 0);
-
 			// Create a writable stream for the concatenated file
 			const fileName = `${group}`; // Group-based output file name
 			let extension = ''; // Default extension
@@ -55,32 +51,17 @@
 				extension = groupedFiles[0].name.split('.').pop() || ''; // Use the extension from the first file
 				if (extension) extension = `.${extension}`;
 			}
-			const writableStream = streamSaver.createWriteStream(`${fileName}${extension}`, {
-				size: totalFileSize,
-			});
-			const writer = writableStream.getWriter();
 
-			// Loop through each file and write its contents to the writable stream
-			for (let i = 0; i < groupedFiles.length; i++) {
-				const file = groupedFiles[i];
-				const reader = file.stream().getReader();
+			// Concatenate files using File([fileBits], fileName) API
+			const newFile = new File(groupedFiles, `${fileName}${extension}`);
 
-				// Read the file content in chunks
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done) break;
-					await writer.write(value); // Write the chunk to the writable stream
-				}
-
-				// Add a newline or separator between files if needed
-				if (i < groupedFiles.length - 1) {
-					const separator = new TextEncoder().encode('\n');
-					await writer.write(separator);
-				}
-			}
-
-			// Close the writer to signal that the stream is complete
-			writer.close();
+			// Trigger file download
+			const elem = window.document.createElement('a');
+			elem.href = window.URL.createObjectURL(newFile);
+			elem.download = newFile.name;
+			document.body.appendChild(elem);
+			elem.click();
+			document.body.removeChild(elem);
 		}
 	}
 	function resetDropzone() {
