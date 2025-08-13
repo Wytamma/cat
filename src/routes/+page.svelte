@@ -8,6 +8,7 @@
 	let regexInput: string = ''; // Holds the user-provided regex string
 	let defaultFilename: string = 'concatenated'; // Default filename for the concatenated file
 	let useFistFileExtension: boolean = true; // Use the extension from the first file
+	let csvMode: boolean = false; // CSV mode (fist line as header)
 
 	// if useFistFileExtension changes, reset the defaultFilename
 	$: if (useFistFileExtension === false && defaultFilename === 'concatenated') {
@@ -65,15 +66,57 @@
 				const file = groupedFiles[i];
 				const reader = file.stream().getReader();
 
-				// Read the file content in chunks
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done) break;
-					await writer.write(value); // Write the chunk to the writable stream
+				if (csvMode) {
+					// CSV/TSV mode: handle headers correctly
+					let buffer = '';
+					let isFirstFile = i === 0;
+					let headerSkipped = false;
+
+					while (true) {
+						const { value, done } = await reader.read();
+						if (done) {
+							// Write any remaining content in buffer
+							if (buffer) {
+								const encoder = new TextEncoder();
+								await writer.write(encoder.encode(buffer));
+							}
+							break;
+						}
+
+						// Decode the chunk and add to buffer
+						const decoder = new TextDecoder();
+						const chunk = decoder.decode(value, { stream: true });
+						buffer += chunk;
+
+						// Process complete lines
+						let lines = buffer.split('\n');
+						buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+						for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+							const line = lines[lineIndex];
+							
+							// Skip first line of non-first files (assuming it's a header)
+							if (!isFirstFile && !headerSkipped) {
+								headerSkipped = true;
+								continue;
+							}
+
+							// Write the line with newline
+							const encoder = new TextEncoder();
+							await writer.write(encoder.encode(line + '\n'));
+						}
+					}
+				} else {
+					// Regular mode: read and write chunks directly
+					while (true) {
+						const { value, done } = await reader.read();
+						if (done) break;
+						await writer.write(value); // Write the chunk to the writable stream
+					}
 				}
 
-				// Add a newline or separator between files if needed
-				if (i < groupedFiles.length - 1) {
+				// Add a newline or separator between files if needed (only in non-CSV mode)
+				if (!csvMode && i < groupedFiles.length - 1) {
 					const separator = new TextEncoder().encode('\n');
 					await writer.write(separator);
 				}
@@ -140,6 +183,10 @@
 					</div>
 				</svelte:fragment>
 				<svelte:fragment slot="content">
+					<label class="flex items-center space-x-2">
+						<input class="checkbox" type="checkbox" bind:checked={csvMode} />
+						<p>CSV/TSV mode (preserve headers)</p>
+					</label>
 					<label class="flex items-center space-x-2">
 						<input class="checkbox" type="checkbox" bind:checked={useFistFileExtension} />
 						<p>Use extension from first file</p>
